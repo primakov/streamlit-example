@@ -1,5 +1,5 @@
 SimpleITK==2.1.1
-numpy==1.22.3
+numpy
 opencv-python==4.5.5.64
 matplotlib
 streamlit
