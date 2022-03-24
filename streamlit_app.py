@@ -1,7 +1,7 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
-import cv2
+import scipy.ndimage as nd #cv2
 import SimpleITK as sitk
 
 st.title('Computer Tomography Non-Small Cell Lung Cancer area calculation')
@@ -40,8 +40,8 @@ elif option == 'Sagittal':
      img_slice = np.rot90(arr[..., x].T)
      msk_slice = np.rot90(msk[..., x].T)
      new_shape = (int(img_spacing[0]*img_slice.shape[1]), int(img_spacing[2]*img_slice.shape[0]))
-     img_slice_r = cv2.resize(img_slice, new_shape, interpolation=cv2.INTER_NEAREST)
-     msk_slice_r = cv2.resize(msk_slice, new_shape, interpolation=cv2.INTER_BITS)
+     img_slice_r = nd.zoom(img_slice, (new_shape[1]/img_slice.shape[0], new_shape[0]/img_slice.shape[1]))#cv2.resize(img_slice, new_shape, interpolation=cv2.INTER_NEAREST)
+     msk_slice_r = nd.zoom(msk_slice, (new_shape[1]/img_slice.shape[0], new_shape[0]/img_slice.shape[1]))#cv2.resize(msk_slice, new_shape, interpolation=cv2.INTER_BITS)
      st.write('NSCLC area: %s [mmˆ2]' % np.round(
           img_spacing[0] * img_spacing[2] * np.round(np.sum(msk_slice_r.flatten()), 2), 2))
 
@@ -52,8 +52,10 @@ elif option == 'Coronal':
      img_slice = np.rot90(arr[:, x, :].T)
      msk_slice = np.rot90(msk[:, x, :].T)
      new_shape = (int(img_spacing[0]*img_slice.shape[1]), int(img_spacing[2]*img_slice.shape[0]))
-     img_slice_r = cv2.resize(img_slice, new_shape, interpolation=cv2.INTER_NEAREST)
-     msk_slice_r = cv2.resize(msk_slice, new_shape, interpolation=cv2.INTER_BITS)
+     img_slice_r = nd.zoom(img_slice, (new_shape[1]/img_slice.shape[0], new_shape[0]/img_slice.shape[1]))
+     #cv2.resize(img_slice, new_shape, interpolation=cv2.INTER_NEAREST)
+     msk_slice_r = nd.zoom(msk_slice, (new_shape[1]/img_slice.shape[0], new_shape[0]/img_slice.shape[1]))
+     #cv2.resize(msk_slice, new_shape, interpolation=cv2.INTER_BITS)
      st.write('NSCLC area: %s [mmˆ2]' % np.round(
           img_spacing[0] * img_spacing[2] * np.round(np.sum(msk_slice_r.flatten()), 2), 2))
 
