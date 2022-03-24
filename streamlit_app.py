@@ -1,38 +1,66 @@
-from collections import namedtuple
-import altair as alt
-import math
-import pandas as pd
 import streamlit as st
+import matplotlib.pyplot as plt
+import numpy as np
+import cv2
+import SimpleITK as sitk
 
-"""
-# Welcome to Streamlit!
-
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:
-
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
-
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+st.title('Computer Tomography Non-Small Cell Lung Cancer area calculation')
+st.markdown("***")
+st.markdown('This demo app allows for visualization of a CT scan and appropriate tumor segmentation in three '
+            'projections: Axial; Sagittal; Coronal. It shows the tumor contour on top of the CT scan and calculates '
+            'the tumor area in mmˆ2')
+option = st.selectbox(
+     'Choose the scan projection: ',
+     ('Axial', 'Sagittal', 'Coronal'))
 
 
-with st.echo(code_location='below'):
-    total_points = st.slider("Number of points in spiral", 1, 5000, 2000)
-    num_turns = st.slider("Number of turns in spiral", 1, 100, 9)
+image = sitk.ReadImage('./data/pat1/image.nrrd')
+img_array = sitk.GetArrayFromImage(image)
+mask_array = sitk.GetArrayFromImage(sitk.ReadImage('./data/pat1/mask.nrrd'))
+img_spacing = image.GetSpacing()
 
-    Point = namedtuple('Point', 'x y')
-    data = []
+arr = img_array.copy()
+msk = mask_array.copy()
 
-    points_per_turn = total_points / num_turns
+fig, ax = plt.subplots()
 
-    for curr_point_num in range(total_points):
-        curr_turn, i = divmod(curr_point_num, points_per_turn)
-        angle = (curr_turn + 1) * 2 * math.pi * i / points_per_turn
-        radius = curr_point_num / total_points
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
-        data.append(Point(x, y))
+if option == 'Axial':
+     arr = img_array.copy()
+     msk = mask_array.copy()
+     x = st.slider("Position", 0, len(arr), int(len(arr) / 2))
+     img_slice_r = arr[x, ...]
+     msk_slice_r = msk[x, ...]
+     st.write('NSCLC area: %s [mmˆ2]' % np.round(
+          img_spacing[0] * img_spacing[1] * np.round(np.sum(msk[x, ...].flatten()), 2), 2))
 
-    st.altair_chart(alt.Chart(pd.DataFrame(data), height=500, width=500)
-        .mark_circle(color='#0068c9', opacity=0.5)
-        .encode(x='x:Q', y='y:Q'))
+elif option == 'Sagittal':
+     x = st.slider("Position", 0, arr.shape[1], int(arr.shape[1] / 2))
+     arr = img_array.copy()
+     msk = mask_array.copy()
+     img_slice = np.rot90(arr[..., x].T)
+     msk_slice = np.rot90(msk[..., x].T)
+     new_shape = (int(img_spacing[0]*img_slice.shape[1]), int(img_spacing[2]*img_slice.shape[0]))
+     img_slice_r = cv2.resize(img_slice, new_shape, interpolation=cv2.INTER_NEAREST)
+     msk_slice_r = cv2.resize(msk_slice, new_shape, interpolation=cv2.INTER_BITS)
+     st.write('NSCLC area: %s [mmˆ2]' % np.round(
+          img_spacing[0] * img_spacing[2] * np.round(np.sum(msk_slice_r.flatten()), 2), 2))
+
+elif option == 'Coronal':
+     x = st.slider("Position", 0, arr.shape[1], int(arr.shape[1] / 2))
+     arr = img_array.copy()
+     msk = mask_array.copy()
+     img_slice = np.rot90(arr[:, x, :].T)
+     msk_slice = np.rot90(msk[:, x, :].T)
+     new_shape = (int(img_spacing[0]*img_slice.shape[1]), int(img_spacing[2]*img_slice.shape[0]))
+     img_slice_r = cv2.resize(img_slice, new_shape, interpolation=cv2.INTER_NEAREST)
+     msk_slice_r = cv2.resize(msk_slice, new_shape, interpolation=cv2.INTER_BITS)
+     st.write('NSCLC area: %s [mmˆ2]' % np.round(
+          img_spacing[0] * img_spacing[2] * np.round(np.sum(msk_slice_r.flatten()), 2), 2))
+
+ax.imshow(img_slice_r, cmap='bone')
+if np.sum(msk_slice_r.flatten()) > 0:
+     ax.contour(msk_slice_r, colors='r')
+
+ax.axis('off')
+fig.tight_layout()
+st.pyplot(fig)

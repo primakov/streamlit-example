@@ -1,3 +1,6 @@
-altair
+SimpleITK
+numpy
+matplotlib
 pandas
 streamlit
+opencv-python
